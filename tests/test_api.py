@@ -294,6 +294,39 @@ async def test_zoho_api_request_async():
             assert mock_client.__aenter__.return_value.request.call_count == 1
 
 
+def test_zoho_api_request_converts_sort_order():
+    """Ensure sort_order is translated before the HTTP request."""
+    mock_response = httpx.Response(200, json={"data": "test"})
+
+    with patch("zoho_mcp.tools.api._get_access_token", return_value="token"):
+        with patch("httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value
+            mock_client.__enter__.return_value.request.return_value = mock_response
+
+            zoho_api_request("GET", "/test", params={"sort_order": "ascending"})
+
+            args, kwargs = mock_client.__enter__.return_value.request.call_args
+            assert kwargs["params"]["sort_order"] == "a"
+
+
+@pytest.mark.asyncio
+async def test_zoho_api_request_async_converts_sort_order():
+    """Ensure async requests translate sort_order."""
+    mock_response = httpx.Response(200, json={"data": "test"})
+
+    with patch("zoho_mcp.tools.api._get_access_token", return_value="token"):
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = mock_client_cls.return_value
+            mock_client.__aenter__.return_value.request.return_value = mock_response
+
+            await zoho_api_request_async(
+                "GET", "/test", params={"sort_order": "descending"}
+            )
+
+            args, kwargs = mock_client.__aenter__.return_value.request.call_args
+            assert kwargs["params"]["sort_order"] == "d"
+
+
 # Test credential validation
 def test_validate_credentials_success():
     """Test successful credential validation."""

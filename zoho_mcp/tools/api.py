@@ -34,6 +34,17 @@ AUTH_BASE_URL = settings.ZOHO_AUTH_BASE_URL
 ORG_ID = settings.ZOHO_ORGANIZATION_ID
 
 
+def _translate_sort_order(params: Dict[str, Any]) -> None:
+    """Convert human readable sort order to Zoho compatible values."""
+    sort_order = params.get("sort_order")
+    if isinstance(sort_order, str):
+        value = sort_order.lower()
+        if value == "ascending":
+            params["sort_order"] = "a"
+        elif value == "descending":
+            params["sort_order"] = "d"
+
+
 # Legacy error classes for backward compatibility
 class ZohoAPIError(APIError):
     """Exception raised for errors in the Zoho API responses."""
@@ -293,14 +304,19 @@ async def zoho_api_request_async(
     """
     if params is None:
         params = {}
-    
+    else:
+        params = params.copy()
+
     # Generate or use provided request ID for tracing
     req_id = request_id or f"zoho-{uuid.uuid4().hex[:8]}"
     set_request_context(request_id=req_id)
-    
+
     # Add organization_id to every request
     if "organization_id" not in params and ORG_ID:
         params["organization_id"] = ORG_ID
+
+    # Convert sort order values if present
+    _translate_sort_order(params)
     
     # Ensure endpoint starts with /
     if not endpoint.startswith("/"):
